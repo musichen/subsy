@@ -96,9 +96,9 @@ fn main() -> Result<()> {
     };
     match cli.cmd {
         Cmd::Path => {
-            println!("data dir: {}", paths::data_dir().display());
-            println!("db:       {}", paths::db_path().display());
-            println!("config:   {}", paths::config_path().display());
+            println!("app dir: {}", paths::app_dir().display());
+            println!("db:      {}", paths::db_path().display());
+            println!("config:  {}", paths::config_path().display());
         }
         Cmd::List { json } => {
             let subs = store.list()?;

@@ -31,5 +31,6 @@ YAML, JSON, CSV, and Markdown are supported.
 
 ## Data
 
-- DB: `~/.local/share/subsy/subsy.db` (override: `XDG_DATA_HOME` or `SUBSY_DATA_DIR`)
-- Config: `~/.config/subsy/config.toml` (override: `XDG_CONFIG_HOME` or `SUBSY_CONFIG_DIR`)
+- DB: `subsy.db` next to the binary (app-internal; delete app = delete data)
+- Config: `subsy-config.toml` next to the binary
+- Override: `SUBSY_DATA_DIR=/my/path`

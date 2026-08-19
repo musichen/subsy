@@ -10,4 +10,4 @@ pub mod calc;
 
 pub use model::*;
 pub use store::Store;
-pub use paths::data_dir;
+pub use paths::{app_dir, db_path, config_path};
