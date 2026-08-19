@@ -31,5 +31,5 @@ YAML, JSON, CSV, and Markdown are supported.
 
 ## Data
 
-- DB: `$XDG_DATA_HOME/subsy/subsy.db` (XDG via `directories` crate)
-- Config: `$XDG_CONFIG_HOME/subsy/config.toml`
+- DB: `~/.local/share/subsy/subsy.db` (override: `XDG_DATA_HOME` or `SUBSY_DATA_DIR`)
+- Config: `~/.config/subsy/config.toml` (override: `XDG_CONFIG_HOME` or `SUBSY_CONFIG_DIR`)
