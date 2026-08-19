@@ -1,0 +1,20 @@
+[package]
+name = "subsy-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Subsy CLI entrypoint"
+
+[[bin]]
+name = "subsy"
+path = "src/main.rs"
+
+[dependencies]
+subsy-core = { path = "../subsy-core" }
+clap = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }

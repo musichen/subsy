@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = ["crates/subsy-core", "crates/subsy-cli", "crates/subsy-tui"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/musichen/subsy"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+toml = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
+clap = { version = "4", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+rust_decimal = { version = "1", features = ["serde"] }
+directories = "5"
+anyhow = "1"
+ratatui = "0.29"
+crossterm = "0.28"
+csv = "1"
+
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1
+opt-level = "z"
