@@ -1,6 +1,6 @@
 # Subsy
 
-![subsy logo](subsy-logo.png)
+![subsy logo](assets/subsy-logo.png)
 
 Manage all your digital Subscriptions / auto discovery / auto reminders / Deals Registry
 
