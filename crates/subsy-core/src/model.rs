@@ -116,6 +116,9 @@ pub struct Subscription {
     pub currency: Option<String>,
     pub billing_cycle: BillingCycle,
     pub status: Status,
+    pub category: Option<String>,
+    pub payment_method: Option<String>,
+    pub reminder_days: Option<i64>,
     pub start_date: Option<NaiveDate>,
     pub end_date: Option<NaiveDate>,
     pub next_renewal: Option<NaiveDate>,
@@ -126,6 +129,17 @@ pub struct Subscription {
     pub source: Source,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Payment {
+    pub id: Uuid,
+    pub subscription_id: Uuid,
+    pub date: NaiveDate,
+    pub amount: Decimal,
+    pub currency: Option<String>,
+    pub notes: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Subscription {
@@ -141,6 +155,9 @@ impl Subscription {
             currency: None,
             billing_cycle: BillingCycle::Monthly,
             status: Status::Active,
+            category: None,
+            payment_method: None,
+            reminder_days: None,
             start_date: None,
             end_date: None,
             next_renewal: None,
