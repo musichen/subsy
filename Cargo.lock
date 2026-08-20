@@ -3980,7 +3980,9 @@ dependencies = [
  "chrono",
  "crossterm",
  "ratatui",
+ "rust_decimal",
  "subsy-core",
+ "uuid",
 ]
 
 [[package]]

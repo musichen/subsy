@@ -15,4 +15,6 @@ subsy-core = { path = "../subsy-core" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 chrono = { workspace = true }
+rust_decimal = { workspace = true }
+uuid = { workspace = true }
 anyhow = { workspace = true }
