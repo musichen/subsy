@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/subsy-core", "crates/subsy-cli", "crates/subsy-tui"]
+members = ["crates/subsy-core", "crates/subsy-cli", "crates/subsy-tui", "crates/subsy-tauri/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
