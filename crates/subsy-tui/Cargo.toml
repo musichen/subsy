@@ -1,0 +1,18 @@
+[package]
+name = "subsy-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Subsy TUI application"
+
+[[bin]]
+name = "subsy-tui"
+path = "src/main.rs"
+
+[dependencies]
+subsy-core = { path = "../subsy-core" }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
