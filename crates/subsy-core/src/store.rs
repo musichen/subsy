@@ -11,13 +11,13 @@ pub struct Store {
 impl Store {
     pub fn open(path: &Path) -> Result<Self> {
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("creating data dir {}", parent.display())
-            })?;
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("creating app dir {}", parent.display()))?;
         }
         let conn = Connection::open(path)
             .with_context(|| format!("opening db {}", path.display()))?;
         conn.execute_batch(include_str!("schema.sql"))?;
+        migrate(&conn)?;
         Ok(Self { conn })
     }
 
@@ -30,9 +30,10 @@ impl Store {
         self.conn.execute(
             r#"INSERT INTO subscriptions
             (id, name, provider, account, plan, price, currency, billing_cycle, status,
+             category, payment_method, reminder_days,
              start_date, end_date, next_renewal, credits_remaining, url, notes, tags, source,
              created_at, updated_at)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19)"#,
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22)"#,
             params![
                 sub.id.to_string(),
                 sub.name,
@@ -43,6 +44,9 @@ impl Store {
                 sub.currency,
                 sub.billing_cycle.as_str(),
                 sub.status.as_str(),
+                sub.category,
+                sub.payment_method,
+                sub.reminder_days,
                 sub.start_date.map(|d| d.to_string()),
                 sub.end_date.map(|d| d.to_string()),
                 sub.next_renewal.map(|d| d.to_string()),
@@ -61,6 +65,7 @@ impl Store {
     pub fn list(&self) -> Result<Vec<Subscription>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, name, provider, account, plan, price, currency, billing_cycle, status,
+                    category, payment_method, reminder_days,
                     start_date, end_date, next_renewal, credits_remaining, url, notes, tags, source,
                     created_at, updated_at
              FROM subscriptions ORDER BY name COLLATE NOCASE",
@@ -76,6 +81,7 @@ impl Store {
     pub fn get(&self, id: &Uuid) -> Result<Option<Subscription>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, name, provider, account, plan, price, currency, billing_cycle, status,
+                    category, payment_method, reminder_days,
                     start_date, end_date, next_renewal, credits_remaining, url, notes, tags, source,
                     created_at, updated_at
              FROM subscriptions WHERE id = ?1",
@@ -97,8 +103,10 @@ impl Store {
         let n = self.conn.execute(
             r#"UPDATE subscriptions SET
                 name=?2, provider=?3, account=?4, plan=?5, price=?6, currency=?7,
-                billing_cycle=?8, status=?9, start_date=?10, end_date=?11, next_renewal=?12,
-                credits_remaining=?13, url=?14, notes=?15, tags=?16, source=?17, updated_at=?18
+                billing_cycle=?8, status=?9,
+                category=?10, payment_method=?11, reminder_days=?12,
+                start_date=?13, end_date=?14, next_renewal=?15,
+                credits_remaining=?16, url=?17, notes=?18, tags=?19, source=?20, updated_at=?21
               WHERE id = ?1"#,
             params![
                 sub.id.to_string(),
@@ -110,6 +118,9 @@ impl Store {
                 sub.currency,
                 sub.billing_cycle.as_str(),
                 sub.status.as_str(),
+                sub.category,
+                sub.payment_method,
+                sub.reminder_days,
                 sub.start_date.map(|d| d.to_string()),
                 sub.end_date.map(|d| d.to_string()),
                 sub.next_renewal.map(|d| d.to_string()),
@@ -130,6 +141,85 @@ impl Store {
             .query_row("SELECT COUNT(*) FROM subscriptions", [], |r| r.get(0))?;
         Ok(n)
     }
+
+    // Payments
+
+    pub fn add_payment(&self, p: &Payment) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO payments (id, subscription_id, date, amount, currency, notes, created_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7)",
+            params![
+                p.id.to_string(),
+                p.subscription_id.to_string(),
+                p.date.to_string(),
+                p.amount.to_string(),
+                p.currency,
+                p.notes,
+                p.created_at.to_rfc3339(),
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_payments(&self, sub_id: &Uuid) -> Result<Vec<Payment>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, subscription_id, date, amount, currency, notes, created_at
+             FROM payments WHERE subscription_id = ?1 ORDER BY date DESC",
+        )?;
+        let rows = stmt.query_map(params![sub_id.to_string()], row_to_payment)?;
+        let mut out = vec![];
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
+    }
+
+    pub fn delete_payment(&self, id: &Uuid) -> Result<bool> {
+        let n = self
+            .conn
+            .execute("DELETE FROM payments WHERE id = ?1", params![id.to_string()])?;
+        Ok(n > 0)
+    }
+
+    pub fn paid_so_far(&self, sub_id: &Uuid) -> Result<rust_decimal::Decimal> {
+        let mut stmt = self.conn.prepare(
+            "SELECT amount FROM payments WHERE subscription_id = ?1",
+        )?;
+        let rows = stmt.query_map(params![sub_id.to_string()], |r| {
+            let s: String = r.get(0)?;
+            Ok(s.parse::<rust_decimal::Decimal>().unwrap_or_default())
+        })?;
+        let mut total = rust_decimal::Decimal::default();
+        for r in rows {
+            total += r?;
+        }
+        Ok(total)
+    }
+}
+
+fn migrate(conn: &Connection) -> Result<()> {
+    let version: i32 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    if version < 1 {
+        conn.execute("ALTER TABLE subscriptions ADD COLUMN category TEXT", [])?;
+        conn.execute("ALTER TABLE subscriptions ADD COLUMN payment_method TEXT", [])?;
+        conn.execute("ALTER TABLE subscriptions ADD COLUMN reminder_days INTEGER", [])?;
+        conn.execute_batch(
+            r#"CREATE TABLE IF NOT EXISTS payments (
+                id TEXT PRIMARY KEY NOT NULL,
+                subscription_id TEXT NOT NULL,
+                date TEXT NOT NULL,
+                amount TEXT NOT NULL,
+                currency TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_payments_sub ON payments(subscription_id);
+            CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(date);
+            "#,
+        )?;
+        conn.execute("PRAGMA user_version = 1", [])?;
+    }
+    Ok(())
 }
 
 fn row_to_sub(r: &rusqlite::Row) -> rusqlite::Result<Subscription> {
@@ -143,14 +233,14 @@ fn row_to_sub(r: &rusqlite::Row) -> rusqlite::Result<Subscription> {
         .and_then(|s| s.parse::<rust_decimal::Decimal>().ok());
     let bc: String = r.get(7)?;
     let status: String = r.get(8)?;
-    let start: Option<String> = r.get(9)?;
-    let end: Option<String> = r.get(10)?;
-    let nxt: Option<String> = r.get(11)?;
-    let credits: Option<i64> = r.get(12)?;
-    let tags: String = r.get(15)?;
-    let source: String = r.get(16)?;
-    let created: String = r.get(17)?;
-    let updated: String = r.get(18)?;
+    let start: Option<String> = r.get(12)?;
+    let end: Option<String> = r.get(13)?;
+    let nxt: Option<String> = r.get(14)?;
+    let credits: Option<i64> = r.get(15)?;
+    let tags: String = r.get(18)?;
+    let source: String = r.get(19)?;
+    let created: String = r.get(20)?;
+    let updated: String = r.get(21)?;
     Ok(Subscription {
         id,
         name: r.get(1)?,
@@ -161,18 +251,48 @@ fn row_to_sub(r: &rusqlite::Row) -> rusqlite::Result<Subscription> {
         currency: r.get(6)?,
         billing_cycle: BillingCycle::from_str(&bc),
         status: Status::from_str(&status),
+        category: r.get(9)?,
+        payment_method: r.get(10)?,
+        reminder_days: r.get(11)?,
         start_date: start.and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
         end_date: end.and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
         next_renewal: nxt.and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
         credits_remaining: credits.map(|c| c as u64),
-        url: r.get(13)?,
-        notes: r.get(14)?,
+        url: r.get(16)?,
+        notes: r.get(17)?,
         tags: if tags.is_empty() { vec![] } else { tags.split(',').map(|s| s.to_string()).collect() },
         source: Source::from_str(&source),
         created_at: chrono::DateTime::parse_from_rfc3339(&created)
             .map(|d| d.with_timezone(&chrono::Utc))
             .unwrap_or_else(|_| chrono::Utc::now()),
         updated_at: chrono::DateTime::parse_from_rfc3339(&updated)
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now()),
+    })
+}
+
+fn row_to_payment(r: &rusqlite::Row) -> rusqlite::Result<Payment> {
+    let id_str: String = r.get(0)?;
+    let id = Uuid::parse_str(&id_str).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+    })?;
+    let sub_id_str: String = r.get(1)?;
+    let sub_id = Uuid::parse_str(&sub_id_str).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(1, rusqlite::types::Type::Text, Box::new(e))
+    })?;
+    let amount: String = r.get(3)?;
+    let amount = amount.parse::<rust_decimal::Decimal>().unwrap_or_default();
+    let date_str: String = r.get(2)?;
+    let created: String = r.get(6)?;
+    Ok(Payment {
+        id,
+        subscription_id: sub_id,
+        date: chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
+            .unwrap_or_else(|_| chrono::NaiveDate::MIN),
+        amount,
+        currency: r.get(4)?,
+        notes: r.get(5)?,
+        created_at: chrono::DateTime::parse_from_rfc3339(&created)
             .map(|d| d.with_timezone(&chrono::Utc))
             .unwrap_or_else(|_| chrono::Utc::now()),
     })

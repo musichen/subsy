@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     currency TEXT,
     billing_cycle TEXT NOT NULL DEFAULT 'unknown',
     status TEXT NOT NULL DEFAULT 'unknown',
+    category TEXT,
+    payment_method TEXT,
+    reminder_days INTEGER,
     start_date TEXT,
     end_date TEXT,
     next_renewal TEXT,
@@ -23,3 +26,20 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE INDEX IF NOT EXISTS idx_subs_status ON subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_subs_renewal ON subscriptions(next_renewal);
 CREATE INDEX IF NOT EXISTS idx_subs_name ON subscriptions(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_subs_category ON subscriptions(category);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY NOT NULL,
+    subscription_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    amount TEXT NOT NULL,
+    currency TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_sub ON payments(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(date);
+
+PRAGMA user_version = 1;

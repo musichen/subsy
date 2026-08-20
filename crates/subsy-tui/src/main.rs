@@ -41,6 +41,9 @@ struct AddForm {
     price: String,
     cycle: String,
     next_renewal: String,
+    category: String,
+    payment_method: String,
+    reminder_days: String,
     tags: String,
     field: usize,
 }
@@ -53,6 +56,9 @@ impl AddForm {
             price: String::new(),
             cycle: "monthly".into(),
             next_renewal: String::new(),
+            category: String::new(),
+            payment_method: String::new(),
+            reminder_days: "7".into(),
             tags: String::new(),
             field: 0,
         }
@@ -64,6 +70,9 @@ impl AddForm {
             ("price", &self.price),
             ("billing_cycle", &self.cycle),
             ("next_renewal (YYYY-MM-DD)", &self.next_renewal),
+            ("category", &self.category),
+            ("payment_method", &self.payment_method),
+            ("reminder_days", &self.reminder_days),
             ("tags (comma)", &self.tags),
         ]
     }
@@ -226,7 +235,10 @@ fn push_to_active(f: &mut AddForm, c: char) {
         2 => &mut f.price,
         3 => &mut f.cycle,
         4 => &mut f.next_renewal,
-        5 => &mut f.tags,
+        5 => &mut f.category,
+        6 => &mut f.payment_method,
+        7 => &mut f.reminder_days,
+        8 => &mut f.tags,
         _ => return,
     };
     target.push(c);
@@ -239,7 +251,10 @@ fn pop_from_active(f: &mut AddForm) {
         2 => &mut f.price,
         3 => &mut f.cycle,
         4 => &mut f.next_renewal,
-        5 => &mut f.tags,
+        5 => &mut f.category,
+        6 => &mut f.payment_method,
+        7 => &mut f.reminder_days,
+        8 => &mut f.tags,
         _ => return,
     };
     target.pop();
@@ -253,6 +268,9 @@ fn build_sub_from_form(f: &AddForm) -> Subscription {
         s.price = p.parse().ok();
     }
     s.next_renewal = parse_date(&f.next_renewal);
+    s.category = nonempty(&f.category);
+    s.payment_method = nonempty(&f.payment_method);
+    s.reminder_days = f.reminder_days.trim().parse().ok().or(Some(7));
     s.tags = f
         .tags
         .split(',')
@@ -350,6 +368,10 @@ fn render_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
                 "{:<14}",
                 truncate(s.provider.as_deref().unwrap_or("-"), 14)
             ));
+            let category = Span::styled(
+                format!("{:<12}", truncate(s.category.as_deref().unwrap_or("-"), 12)),
+                Style::default().fg(Color::Cyan),
+            );
             let cycle = Span::raw(format!("{:<10}", s.billing_cycle.as_str()));
             let renewal = match s.next_renewal {
                 Some(d) => {
@@ -383,6 +405,7 @@ fn render_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
                 badge,
                 name,
                 provider,
+                category,
                 cycle,
                 renewal,
                 Span::raw(price),
@@ -430,6 +453,9 @@ fn render_detail(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     row("plan", s.plan.clone().unwrap_or_else(|| "-".into()));
     row("status", s.status.as_str().into());
     row("billing", s.billing_cycle.as_str().into());
+    row("category", s.category.clone().unwrap_or_else(|| "-".into()));
+    row("payment method", s.payment_method.clone().unwrap_or_else(|| "-".into()));
+    row("reminder", s.reminder_days.map(|d| format!("{d} days before")).unwrap_or_else(|| "-".into()));
     let price = s
         .price
         .map(|p| match &s.currency {
@@ -456,6 +482,21 @@ fn render_detail(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     row("source", s.source.as_str().into());
     row("created", s.created_at.to_rfc3339());
     row("updated", s.updated_at.to_rfc3339());
+    if let Ok(paid) = app.store.paid_so_far(&s.id) {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{:<14}", "paid so far"), Style::default().fg(Color::DarkGray)),
+            Span::raw(paid.to_string()),
+        ]));
+    }
+    if let Ok(payments) = app.store.list_payments(&s.id) {
+        if !payments.is_empty() {
+            lines.push(Line::from(Span::styled("payments:", Style::default().fg(Color::DarkGray))));
+            for p in payments.iter().take(10) {
+                let c = p.currency.as_deref().unwrap_or("");
+                lines.push(Line::from(format!("  {}  {} {}", p.date, p.amount, c)));
+            }
+        }
+    }
     let p = Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("detail · esc to back · d to delete"))
         .wrap(Wrap { trim: true });

@@ -1148,6 +1148,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "subsy-core",
+ "toml",
  "uuid",
 ]
 
