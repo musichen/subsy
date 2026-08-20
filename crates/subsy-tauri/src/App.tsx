@@ -99,11 +99,14 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-green-400">subsy</h1>
-          <p className="text-slate-400 text-sm">
-            {summary.active} active · {summary.ending} ending soon · ${summary.monthly}/mo · ${summary.yearly}/yr
-          </p>
+        <div className="flex items-center gap-3">
+          <img src="/subsy-logo.png" alt="subsy" className="w-10 h-10 rounded-lg" />
+          <div>
+            <h1 className="text-3xl font-bold text-green-400">subsy</h1>
+            <p className="text-slate-400 text-sm">
+              {summary.active} active · {summary.ending} ending soon · ${summary.monthly}/mo · ${summary.yearly}/yr
+            </p>
+          </div>
         </div>
         <nav className="flex gap-2 flex-wrap">
           {navBtn("dashboard", "Dashboard")}
