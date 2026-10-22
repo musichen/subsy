@@ -4,6 +4,11 @@
 
 Manage all your digital Subscriptions / auto discovery / auto reminders / Deals Registry
 
+## Requirements
+
+- A Rust toolchain (`cargo`) for the CLI and TUI. Install it with [rustup](https://rustup.rs/).
+- Node.js and `npm` only for the optional Tauri desktop app under `crates/subsy-tauri`.
+
 ## Quick start
 
 ```bash
@@ -51,3 +56,7 @@ YAML, JSON, CSV, and Markdown are supported.
 ./target/release/subsy export subs.json
 ./target/release/subsy export subs.csv
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
