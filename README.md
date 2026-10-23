@@ -21,6 +21,25 @@ cargo build --release
 cargo run --release -p subsy-tui    # launch TUI
 ```
 
+## CLI commands
+
+The `subsy` binary (clap subcommands in `crates/subsy-cli/src/main.rs`) provides:
+
+| Command | Description |
+| --- | --- |
+| `subsy list [--json] [--status <s>] [--category <c>] [--tag <t>]` | List subscriptions, optionally filtered |
+| `subsy add <name> [--provider <p>] [--price <p>] [--currency <c>] [--cycle <c>]` | Add a subscription |
+| `subsy edit <id> [--name <n>] [--price <p>] [--status <s>]` | Edit a subscription by id |
+| `subsy show <id>` / `subsy rm <id>` | Show or remove one subscription |
+| `subsy search <query> [--json]` | Search subscriptions |
+| `subsy summary [--json]` | Totals and summary (also in Quick start) |
+| `subsy import <file>` / `subsy export <file>` | Import or export YAML, JSON, CSV, or Markdown |
+| `subsy path` | Print the data file location |
+| `subsy tui` | Launch the terminal UI (same as `cargo run -p subsy-tui`) |
+| `subsy doctor` | Diagnose the local setup |
+| `subsy config show|set` | Show or set currency, reminder days, and theme |
+| `subsy payment add ...` | Record a payment for a subscription |
+
 ## Workspace
 
 - `crates/subsy-core` — domain model + SQLite + import/export + config
