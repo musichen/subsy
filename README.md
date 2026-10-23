@@ -40,6 +40,10 @@ The `subsy` binary (clap subcommands in `crates/subsy-cli/src/main.rs`) provides
 | `subsy config show|set` | Show or set currency, reminder days, and theme |
 | `subsy payment add ...` | Record a payment for a subscription |
 
+## Documentation
+
+The full specification lives in [`docs/SUBSY-SPEC.md`](docs/SUBSY-SPEC.md). Start there for the domain model, storage, and import/export contracts before changing `subsy-core`.
+
 ## Workspace
 
 - `crates/subsy-core` — domain model + SQLite + import/export + config
